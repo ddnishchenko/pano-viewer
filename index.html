@@ -49,7 +49,7 @@
     <!-- <iframe width='853' height='480' src='https://my.matterport.com/show/?m=yuCvULHhrmC' frameborder='0' allowfullscreen allow='xr-spatial-tracking'></iframe> -->
     <script>
       jQuery(document).ready(function($){
-        $.getJSON('/asset/models/RE249ed7S7A/data.json', function(data, textStatus, jqXHR) {
+        $.getJSON('./asset/models/RE249ed7S7A/data.json', function(data, textStatus, jqXHR) {
           console.log(data);
 
           var progressElement = document.getElementById( 'progress' );
@@ -79,7 +79,7 @@
             autoHideInfospot: false
           });
           var sweeps = data.sweeps;
-          var panos = sweeps.map(sweep => new PANOLENS.ImagePanorama(`asset/models/RE249ed7S7A/${sweep.index}.jpg`));
+          var panos = sweeps.map(sweep => new PANOLENS.ImagePanorama(`./asset/models/RE249ed7S7A/${sweep.index}.jpg`));
           
           panos.forEach(function(el) {
             viewer.add( el );
