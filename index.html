@@ -116,30 +116,103 @@
               console.log(event);
             })
           });
-          var k = 5000;
+
+          
+          var ky = 5000;
+          var kx = 5000;
+          var kz = 5000;
+          // var a = 10000;
           var map = document.getElementById('map');
           panos.forEach((el, index) => {
-            el.isInfospotVisible = true;
-            var prevSweep = sweeps[index - 1] || { position: {} }; 
             var sweep = sweeps[index];
             var div = document.createElement('DIV', {className: 'spot'});
             div.className = 'spot';
             div.style.top = 100 + (30 * sweep.position.z) + 'px';
             div.style.left = 150 + (30 * sweep.position.x) + 'px';
             map.appendChild(div);
+          });
+          /*
+          panos.forEach((el, index) => {
+            el.isInfospotVisible = true;
+            var sweep = sweeps[index];
+            var prevSweep = sweeps[index - 1] || { position: {} }; 
             var neighbors = sweeps.filter(s => sweep.neighbors.includes(s.uuid));
             console.log(neighbors);
-            if(index) el.rotateY(-1.5);
+            // el.rotation.set(5000, 5000, 5000);
+            if (index) el.rotateY(-1.5);
             neighbors.forEach(s => {
-              let x = ( s.position.x * k  );
-              let y = -( s.position.y * k  );
-              let z = ( s.position.z * k  );
+              let x = ( s.position.x * kx  );
+              let y = -( s.position.y * ky  );
+              let z = ( s.position.z * kz  );
               el.link(panos[s.index], new THREE.Vector3(x, y, z));
             });
             
-          })
+          });
+         */ 
 
+          var points = [
+           { // point 0
+             neighbors: [
+               {coord: [3720.03, -5000.00, 3180.35], index: 1},
+               {coord: [5000.00, -3258.59, 3018.67], index: 2}
+             ]
+           },
+           {// point 1
+            neighbors: [
+               {coord: [2051.40, -5000.00, -3595.72], index: 0},
+               {coord: [-545.00, -5000.00, 3893.61], index: 2}
+             ]
+           },
+           { // point 2
+            neighbors: [
+               {coord: [-2538.89, -5000.00, 1028.42], index: 3},
+               {coord: [527.38, -5000.00, -3690.14], index: 1},
+               {coord: [1913.16, -3519.87, -5148.23], index: 0}
+             ]
+           },
+           { // point 3
+            neighbors: [
+               {coord: [2527.47, -5000.00, -1123.86], index: 2},
+               {coord: [-1767.76, -5000.00, -2138.89], index: 4},
+               {coord: [-2062.69, -2018.34, -4866.28], index: 5},
+               {coord: [-1436.11, -593.43, -4910.71], index: 6},
+             ]
+           },
+           { // point 4
+            neighbors: [
+               {coord: [2124.82, -5000.00, 2258.95], index: 3},
+               {coord: [-1685.95, -2529.73, -4893.00], index: 5},
+               {coord: [-1042.86, -696.65, -4938.60], index: 6},
+             ]
+           },
+           { // point 5
+            neighbors: [
+               {coord: [2157.58, -2125.42, 4859.55], index: 3},
+               {coord: [1655.07, -2611.38, 4895.19], index: 4},
+               {coord: [-215.44, -1654.30, -4997.28], index: 6},
+             ]
+           },
+           { // point 6
+            neighbors: [
+               {coord: [4882.29, -1482.48, -1836.91], index: 3},
+               {coord: [4911.01, -1647.04, -1431.89], index: 4},
+               {coord: [4974.05, -3729.28, -543.02], index: 5},
+             ]
+           },
+         ];
+          panos.forEach((el, index) => {
+            el.isInfospotVisible = true; 
+            var sweep = sweeps[index];
+            var neighbors = points[index].neighbors;
+            neighbors.forEach(s => {
+              const [x,y,z] = s.coord;
+              el.link(panos[s.index], new THREE.Vector3(x, y, z));
+            });
+            
+          });
           
+         
+         
           //panorama1.link( panorama2, new THREE.Vector3( 5000.00, -2833.78, -932.59 ) );
           // viewer.panorama.addEventListener('click', function(event){
           //   console.log('pana', event);
