@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <base href="https://ddnishchenko.github.io/pano-viewer/">
+    <!-- <base href="https://ddnishchenko.github.io/pano-viewer/"> -->
     <meta charset="utf-8">
     <meta name="viewport" content="initial-scale=1, maximum-scale=1, user-scalable=no, width=device-width, shrink-to-fit=no">
     <title>Panolens.js panorama linking</title>
@@ -40,6 +40,7 @@
       }
       #map {
         position: fixed;
+        padding: 10px;
         top: 20px;
         left: 20px;
         width: 300px;
@@ -55,11 +56,24 @@
         height: 10px;
         border-radius: 10px;
       }
+      .infospot-container {
+        max-width: 500px;
+        max-height: 500px;
+        min-width: 200px;
+        min-height: 250px;
+        background: #fff;
+        color: #000;
+        border-radius: 3px;
+        overflow: auto;
+        -webkit-overflow-scrolling: touch;
+      }
     </style>
   </head>
 
   <body>
-    <div id="map"></div>
+    <div id="map">
+      Press F12 to debug coordinates by moving cursore on infospot
+    </div>
     <div id="progress" style="width: 100%;" class="finish"></div>
     <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
     <script src="./js/three/three.min.js"></script>
@@ -127,7 +141,7 @@
             var sweep = sweeps[index];
             var div = document.createElement('DIV', {className: 'spot'});
             div.className = 'spot';
-            div.style.top = 100 + (30 * sweep.position.z) + 'px';
+            div.style.top = 10 + (30 * sweep.position.z) + 'px';
             div.style.left = 150 + (30 * sweep.position.x) + 'px';
             map.appendChild(div);
           });
@@ -201,12 +215,38 @@
            },
          ];
           panos.forEach((el, index) => {
-            el.isInfospotVisible = true; 
+            // el.isInfospotVisible = true; 
             var sweep = sweeps[index];
+            var p = sweep.position;
             var neighbors = points[index].neighbors;
-            neighbors.forEach(s => {
+            neighbors.forEach((s, i) => {
               const [x,y,z] = s.coord;
               el.link(panos[s.index], new THREE.Vector3(x, y, z));
+              var div = document.createElement('DIV');
+              div.className = 'infospot-container';
+              div.innerHTML = `
+                <div>Pano x:${x}|y:${y}|z:${z}</div>
+                <div>Matterport: <pre>${JSON.stringify(sweep, null, '\t')}</pre></div>
+              `;
+              var infospot2 = new PANOLENS.Infospot( 300, PANOLENS.DataImage.Info );
+              infospot2.position.set( x - 300, y, z - 300 );
+              infospot2.addHoverElement(div);
+              infospot2.addEventListener('hover', function() {
+                console.log(s.coord, sweep);
+              });
+              infospot2.addEventListener('click', function() {
+                console.log(s.coord, sweep);
+                const txt = document.createElement('textarea');
+                txt.value = `
+                <div>Pano x:${x}|y:${y}|z:${z}</div>
+                <div>Matterport: <pre>${JSON.stringify(sweep, null, '\t')}</pre></div>
+                `;
+                document.body.appendChild(txt);
+                txt.select();
+                document.execCommand('copy');
+                document.body.removeChild(txt);
+              })
+              el.add(infospot2);
             });
             
           });
