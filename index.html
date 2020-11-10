@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <base href="https://ddnishchenko.github.io/pano-viewer/">
+    <!-- <base href="https://ddnishchenko.github.io/pano-viewer/"> -->
     <meta charset="utf-8">
     <meta name="viewport" content="initial-scale=1, maximum-scale=1, user-scalable=no, width=device-width, shrink-to-fit=no">
     <title>Panolens.js panorama linking</title>
@@ -38,10 +38,28 @@
       #progress.finish {
         opacity: 0;
       }
+      #map {
+        position: fixed;
+        top: 20px;
+        left: 20px;
+        width: 300px;
+        height: 300px;
+        border: 1px solid black;
+        border-radius: 30px;
+        background-color: #fff;
+      }
+      .spot {
+        position: relative;
+        background-color: #f0f;
+        width: 10px;
+        height: 10px;
+        border-radius: 10px;
+      }
     </style>
   </head>
 
   <body>
+    <div id="map"></div>
     <div id="progress" style="width: 100%;" class="finish"></div>
     <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
     <script src="./js/three/three.min.js"></script>
@@ -71,35 +89,52 @@
 
           }
 
+          var camera = new THREE.PerspectiveCamera( 60, window.innerWidth / window.innerHeight, 1, 100000 );
+          // camera.target = new THREE.Vector3(0, 0, 0);
+          // camera.position.set(0, 0, 10);
 
           var viewer = new PANOLENS.Viewer({
             output: 'console',
             viewIndicator: true,
             indicatorSize: 50,
-            autoHideInfospot: false
+            autoHideInfospot: false,
+            camera: camera,
+            
           });
+          console.log(viewer);
           var sweeps = data.sweeps;
-          var panos = sweeps.map(sweep => new PANOLENS.ImagePanorama(`./asset/models/RE249ed7S7A/${sweep.index}.jpg`));
+          var panos = sweeps.map(sweep => new PANOLENS.ImagePanorama(`./asset/models/RE249ed7S7A/${sweep.index}.jpg`, 10000));
           
           panos.forEach(function(el) {
             viewer.add( el );
             el.addEventListener('progress', onProgress);
             el.addEventListener('enter', onEnter);
             el.addEventListener('enter-start', function(event){
-              //console.log(event);
+              console.log(event);
             })
             el.addEventListener('leave-start', function(event){
-              //console.log(event);
+              console.log(event);
             })
           });
-
+          var k = 5000;
+          var map = document.getElementById('map');
           panos.forEach((el, index) => {
             el.isInfospotVisible = true;
+            var prevSweep = sweeps[index - 1] || { position: {} }; 
             var sweep = sweeps[index];
+            var div = document.createElement('DIV', {className: 'spot'});
+            div.className = 'spot';
+            div.style.top = 100 + (30 * sweep.position.z) + 'px';
+            div.style.left = 150 + (30 * sweep.position.x) + 'px';
+            map.appendChild(div);
             var neighbors = sweeps.filter(s => sweep.neighbors.includes(s.uuid));
             console.log(neighbors);
+            if(index) el.rotateY(-1.5);
             neighbors.forEach(s => {
-              el.link(panos[s.index], new THREE.Vector3( s.position.x * 5000, s.position.y - 5000, s.position.z * 5000));
+              let x = ( s.position.x * k  );
+              let y = -( s.position.y * k  );
+              let z = ( s.position.z * k  );
+              el.link(panos[s.index], new THREE.Vector3(x, y, z));
             });
             
           })
