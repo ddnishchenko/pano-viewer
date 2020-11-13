@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <base href="https://ddnishchenko.github.io/pano-viewer/">
+    <!-- <base href="https://ddnishchenko.github.io/pano-viewer/"> -->
     <meta charset="utf-8">
     <meta name="viewport" content="initial-scale=1, maximum-scale=1, user-scalable=no, width=device-width, shrink-to-fit=no">
     <title>Panolens.js panorama linking</title>
@@ -80,195 +80,229 @@
     <script src="./js/panolens/panolens.min.js"></script>
     <!-- <iframe width='853' height='480' src='https://my.matterport.com/show/?m=yuCvULHhrmC' frameborder='0' allowfullscreen allow='xr-spatial-tracking'></iframe> -->
     <script>
-      jQuery(document).ready(function($){
-        $.getJSON('./asset/models/RE249ed7S7A/data.json', function(data, textStatus, jqXHR) {
-          console.log(data);
+      let viewer, camera;
+      async function init() {
+        const res = await fetch(`./asset/models/RE249ed7S7A/data.json`);
+        const data = await res.json();
 
-          var progressElement = document.getElementById( 'progress' );
+        console.log(data);
 
-          function onEnter ( event ) {
+        var progressElement = document.getElementById( 'progress' );
 
-            progressElement.style.width = 0;
-            progressElement.classList.remove( 'finish' );
+        function onEnter ( event ) {
 
+          progressElement.style.width = 0;
+          progressElement.classList.remove( 'finish' );
+
+        }
+
+        function onProgress ( event ) {
+
+          progress = event.progress.loaded / event.progress.total * 100;
+          progressElement.style.width = progress + '%';
+          if ( progress === 100 ) {
+            progressElement.classList.add( 'finish' );
           }
 
-          function onProgress ( event ) {
+        }
 
-            progress = event.progress.loaded / event.progress.total * 100;
-            progressElement.style.width = progress + '%';
-            if ( progress === 100 ) {
-              progressElement.classList.add( 'finish' );
-            }
+        camera = new THREE.PerspectiveCamera( 60, window.innerWidth / window.innerHeight, 1, 100000 );
+        // camera.target = new THREE.Vector3(0, 0, 0);
+        // camera.position.set(0, 0, 10);
 
+        viewer = new PANOLENS.Viewer({
+          output: 'console',
+          viewIndicator: true,
+          indicatorSize: 50,
+          autoHideInfospot: false,
+          camera: camera,
+          
+        });
+        console.log(viewer);
+        var sweeps = data.sweeps;
+        var panos = sweeps.map(sweep => {
+          if (sweep.index == 0) {
+            let arr = [
+              0, // front
+              1, // back
+              4, // top
+              5, // bottom
+              2, // left
+              3 // right
+            ]
+            .map(i => `./asset/models/RE249ed7S7A/side_${i}.jpg`)
+            console.log(arr);
+            const p = new PANOLENS.CubePanorama(arr);
+            return p;
           }
+          return new PANOLENS.ImagePanorama(`./asset/models/RE249ed7S7A/${sweep.index}.jpg`, 10000);
+        });
+        
+        panos.forEach(function(el) {
+          viewer.add( el );
+          el.addEventListener('progress', onProgress);
+          el.addEventListener('enter', onEnter);
+          el.addEventListener('enter-start', function(event){
+            //console.log(event);
+          })
+          el.addEventListener('leave-start', function(event){
+            //console.log(event);
+          })
+        });
 
-          var camera = new THREE.PerspectiveCamera( 60, window.innerWidth / window.innerHeight, 1, 100000 );
-          // camera.target = new THREE.Vector3(0, 0, 0);
-          // camera.position.set(0, 0, 10);
-
-          var viewer = new PANOLENS.Viewer({
-            output: 'console',
-            viewIndicator: true,
-            indicatorSize: 50,
-            autoHideInfospot: false,
-            camera: camera,
+        
+        
+        var map = document.getElementById('map');
+        panos.forEach((el, index) => {
+          var sweep = sweeps[index];
+          var div = document.createElement('DIV', {className: 'spot'});
+          div.className = 'spot';
+          div.style.top = 10 + (30 * sweep.position.z) + 'px';
+          div.style.left = 150 + (30 * sweep.position.x) + 'px';
+          map.appendChild(div);
+        });
+        var k = 2000;
+        panos.forEach((el, index) => {
+          el.isInfospotVisible = true;
+          var sweep = sweeps[index];
+          var prevSweep = sweeps[index - 1] || { position: {} }; 
+          var neighbors = sweeps.filter(s => sweep.neighbors.includes(s.uuid));
+          //console.log(neighbors);
+          // el.rotation.set(5000, 5000, 5000);
+          if (index) el.rotateY(-1.5);
+          neighbors.forEach(s => {
+            //console.log('Before:', s.position);
+            let x = ( s.position.x * k );
+            let y = -( s.position.y * k );
+            let z = ( s.position.z * k );
+            //console.log('After:', {x, y, z});
             
+            el.link(panos[s.index], new THREE.Vector3(x, y, z));
           });
-          console.log(viewer);
-          var sweeps = data.sweeps;
-          var panos = sweeps.map(sweep => new PANOLENS.ImagePanorama(`./asset/models/RE249ed7S7A/${sweep.index}.jpg`, 10000));
           
-          panos.forEach(function(el) {
-            viewer.add( el );
-            el.addEventListener('progress', onProgress);
-            el.addEventListener('enter', onEnter);
-            el.addEventListener('enter-start', function(event){
-              console.log(event);
-            })
-            el.addEventListener('leave-start', function(event){
-              console.log(event);
-            })
-          });
+        });
+        
 
-          
-          var ky = 5000;
-          var kx = 5000;
-          var kz = 5000;
-          // var a = 10000;
-          var map = document.getElementById('map');
-          panos.forEach((el, index) => {
-            var sweep = sweeps[index];
-            var div = document.createElement('DIV', {className: 'spot'});
-            div.className = 'spot';
-            div.style.top = 10 + (30 * sweep.position.z) + 'px';
-            div.style.left = 150 + (30 * sweep.position.x) + 'px';
-            map.appendChild(div);
-          });
-          /*
-          panos.forEach((el, index) => {
-            el.isInfospotVisible = true;
-            var sweep = sweeps[index];
-            var prevSweep = sweeps[index - 1] || { position: {} }; 
-            var neighbors = sweeps.filter(s => sweep.neighbors.includes(s.uuid));
-            console.log(neighbors);
-            // el.rotation.set(5000, 5000, 5000);
-            if (index) el.rotateY(-1.5);
-            neighbors.forEach(s => {
-              let x = ( s.position.x * kx  );
-              let y = -( s.position.y * ky  );
-              let z = ( s.position.z * kz  );
-              el.link(panos[s.index], new THREE.Vector3(x, y, z));
+        var points = [
+          { // point 0
+            coord: [2051.40, -5000.00, -3595.72],
+            index: 0,
+            neighbors: [
+              {coord: [3720.03, -5000.00, 3180.35], index: 1},
+              {coord: [5000.00, -3258.59, 3018.67], index: 2}
+            ]
+          },
+          {// point 1
+          coord: [3720.03, -5000.00, 3180.35],
+          index: 1,
+          neighbors: [
+              {coord: [2051.40, -5000.00, -3595.72], index: 0},
+              {coord: [-545.00, -5000.00, 3893.61], index: 2}
+            ]
+          },
+          { // point 2
+          coord: [-545.00, -5000.00, 3893.61],
+          index: 2,
+          neighbors: [
+              {coord: [-2538.89, -5000.00, 1028.42], index: 3},
+              {coord: [527.38, -5000.00, -3690.14], index: 1},
+              {coord: [1913.16, -3519.87, -5148.23], index: 0}
+            ]
+          },
+          { // point 3
+          coord: [-2538.89, -5000.00, 1028.42],
+          index: 3,
+          neighbors: [
+              {coord: [2527.47, -5000.00, -1123.86], index: 2},
+              {coord: [-1767.76, -5000.00, -2138.89], index: 4},
+              {coord: [-2062.69, -2018.34, -4866.28], index: 5},
+              {coord: [-1436.11, -593.43, -4910.71], index: 6},
+            ]
+          },
+          { // point 4
+          coord: [-1767.76, -5000.00, -2138.89],
+          index: 4,
+          neighbors: [
+              {coord: [2124.82, -5000.00, 2258.95], index: 3},
+              {coord: [-1685.95, -2529.73, -4893.00], index: 5},
+              {coord: [-1042.86, -696.65, -4938.60], index: 6},
+            ]
+          },
+          { // point 5
+          coord: [-1685.95, -2529.73, -4893.00],
+          index: 5,
+          neighbors: [
+              {coord: [2157.58, -2125.42, 4859.55], index: 3},
+              {coord: [1655.07, -2611.38, 4895.19], index: 4},
+              {coord: [-215.44, -1654.30, -4997.28], index: 6},
+            ]
+          },
+          { // point 6
+          coord: [-215.44, -1654.30, -4997.28],
+          index: 6,
+          neighbors: [
+              {coord: [4882.29, -1482.48, -1836.91], index: 3},
+              {coord: [4911.01, -1647.04, -1431.89], index: 4},
+              {coord: [4974.05, -3729.28, -543.02], index: 5},
+            ]
+          },
+        ];
+        /*
+        panos.forEach((el, index) => {
+          // el.isInfospotVisible = true; 
+          var sweep = sweeps[index];
+          var p = sweep.position;
+          var neighbors = points[index].neighbors;
+          neighbors.forEach((s, i) => {
+            const [x,y,z] = s.coord;
+            var cSweep = sweeps[s.index];
+            el.link(panos[s.index], new THREE.Vector3(x, y, z));
+            var div = document.createElement('DIV');
+            div.className = 'infospot-container';
+            div.innerHTML = `
+              <div>Pano x:${x}|y:${y}|z:${z}</div>
+              <div>Matterport: <pre>${JSON.stringify(cSweep, null, '\t')}</pre></div>
+            `;
+            var infospot2 = new PANOLENS.Infospot( 300, PANOLENS.DataImage.Info );
+            infospot2.position.set( x - 300, y, z - 300 );
+            infospot2.addHoverElement(div);
+            infospot2.addEventListener('hover', function() {
+              console.log(s.coord, cSweep);
             });
-            
-          });
-         */ 
-
-          var points = [
-           { // point 0
-             neighbors: [
-               {coord: [3720.03, -5000.00, 3180.35], index: 1},
-               {coord: [5000.00, -3258.59, 3018.67], index: 2}
-             ]
-           },
-           {// point 1
-            neighbors: [
-               {coord: [2051.40, -5000.00, -3595.72], index: 0},
-               {coord: [-545.00, -5000.00, 3893.61], index: 2}
-             ]
-           },
-           { // point 2
-            neighbors: [
-               {coord: [-2538.89, -5000.00, 1028.42], index: 3},
-               {coord: [527.38, -5000.00, -3690.14], index: 1},
-               {coord: [1913.16, -3519.87, -5148.23], index: 0}
-             ]
-           },
-           { // point 3
-            neighbors: [
-               {coord: [2527.47, -5000.00, -1123.86], index: 2},
-               {coord: [-1767.76, -5000.00, -2138.89], index: 4},
-               {coord: [-2062.69, -2018.34, -4866.28], index: 5},
-               {coord: [-1436.11, -593.43, -4910.71], index: 6},
-             ]
-           },
-           { // point 4
-            neighbors: [
-               {coord: [2124.82, -5000.00, 2258.95], index: 3},
-               {coord: [-1685.95, -2529.73, -4893.00], index: 5},
-               {coord: [-1042.86, -696.65, -4938.60], index: 6},
-             ]
-           },
-           { // point 5
-            neighbors: [
-               {coord: [2157.58, -2125.42, 4859.55], index: 3},
-               {coord: [1655.07, -2611.38, 4895.19], index: 4},
-               {coord: [-215.44, -1654.30, -4997.28], index: 6},
-             ]
-           },
-           { // point 6
-            neighbors: [
-               {coord: [4882.29, -1482.48, -1836.91], index: 3},
-               {coord: [4911.01, -1647.04, -1431.89], index: 4},
-               {coord: [4974.05, -3729.28, -543.02], index: 5},
-             ]
-           },
-         ];
-          panos.forEach((el, index) => {
-            // el.isInfospotVisible = true; 
-            var sweep = sweeps[index];
-            var p = sweep.position;
-            var neighbors = points[index].neighbors;
-            neighbors.forEach((s, i) => {
-              const [x,y,z] = s.coord;
-              var cSweep = sweeps[s.index];
-              el.link(panos[s.index], new THREE.Vector3(x, y, z));
-              var div = document.createElement('DIV');
-              div.className = 'infospot-container';
-              div.innerHTML = `
-                <div>Pano x:${x}|y:${y}|z:${z}</div>
-                <div>Matterport: <pre>${JSON.stringify(cSweep, null, '\t')}</pre></div>
+            infospot2.addEventListener('click', function() {
+              console.log(s.coord, cSweep);
+              const txt = document.createElement('textarea');
+              txt.value = `
+              <div>Pano x:${x}|y:${y}|z:${z}</div>
+              <div>Matterport: <pre>${JSON.stringify(cSweep, null, '\t')}</pre></div>
               `;
-              var infospot2 = new PANOLENS.Infospot( 300, PANOLENS.DataImage.Info );
-              infospot2.position.set( x - 300, y, z - 300 );
-              infospot2.addHoverElement(div);
-              infospot2.addEventListener('hover', function() {
-                console.log(s.coord, cSweep);
-              });
-              infospot2.addEventListener('click', function() {
-                console.log(s.coord, cSweep);
-                const txt = document.createElement('textarea');
-                txt.value = `
-                <div>Pano x:${x}|y:${y}|z:${z}</div>
-                <div>Matterport: <pre>${JSON.stringify(cSweep, null, '\t')}</pre></div>
-                `;
-                document.body.appendChild(txt);
-                txt.select();
-                document.execCommand('copy');
-                document.body.removeChild(txt);
-              })
-              el.add(infospot2);
-            });
-            
+              document.body.appendChild(txt);
+              txt.select();
+              document.execCommand('copy');
+              document.body.removeChild(txt);
+            })
+            el.add(infospot2);
           });
           
-         
-         
-          //panorama1.link( panorama2, new THREE.Vector3( 5000.00, -2833.78, -932.59 ) );
-          // viewer.panorama.addEventListener('click', function(event){
-          //   console.log('pana', event);
-          // })
+        });
+        */
+        
+        
+        //panorama1.link( panorama2, new THREE.Vector3( 5000.00, -2833.78, -932.59 ) );
+        // viewer.panorama.addEventListener('click', function(event){
+        //   console.log('pana', event);
+        // })
 
-          // viewer.panorama.addEventListener('move', function(event){
-          //   console.log('pana', event);
-          // })
+        // viewer.panorama.addEventListener('move', function(event){
+        //   console.log('pana', event);
+        // })
 
-          // Linking between panoramas
-          
-          // Pair
-          
-        })
-      });
+        // Linking between panoramas
+        
+        // Pair
+
+      }
+      init();
     </script>
 
   </body>
